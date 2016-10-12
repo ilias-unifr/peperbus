@@ -46,35 +46,42 @@ class ilPeperbusConfigGUI extends ilPluginConfigGUI
 	 */
 	public function initConfigurationForm()
 	{
-		global $lng, $ilCtrl;
+		global $ilCtrl;
 		
 		$pl = $this->getPluginObject();
 	
 		include_once("Services/Form/classes/class.ilPropertyFormGUI.php");
 		$form = new ilPropertyFormGUI();
 	
-		// setting 1 (a checkbox)
-		$cb = new ilCheckboxInputGUI($pl->txt("setting_1"), "setting_1");
-		$form->addItem($cb);
 		
-		// setting 2 (text)
-		$ti = new ilTextInputGUI($pl->txt("setting_2"), "setting_2");
-		$ti->setRequired(true);
-		$ti->setMaxLength(10);
-		$ti->setSize(10);
-		$form->addItem($ti);
-	
+		
+		// Show Block?
+		$cb = new ilCheckboxInputGUI($pl->txt("show_block"), "show_block");
+		$cb -> setValue(0);
+		$cb->setChecked($this->getConfigValue('show_block', false));
+		$form->addItem($cb);
+
+		
+		// Peperbus Info message
+		$peperbus_message = new ilTextInputGUI($pl->txt("peperbus_message"), "peperbus_message");
+		$peperbus_message->setRequired(true);
+		$peperbus_message->setMaxLength(300);
+		$peperbus_message->setSize(60);
+		$peperbus_message->setValue($this->getConfigValue('peperbus_message')); //??
+		$form->addItem($peperbus_message);
+
+		// Save Button
+			
 		$form->addCommandButton("save", $lng->txt("save"));
 	                
-		$form->setTitle($pl->txt("example_plugin_configuration"));
+		$form->setTitle($pl->txt("peperbus_configuration"));
 		$form->setFormAction($ilCtrl->getFormAction($this));
 		
 		return $form;
 	}
 	
 	/**
-	 * Save form input (currently does not save anything to db)
-	 *
+	 * Save form input 	 *
 	 */
 	public function save()
 	{
@@ -85,10 +92,9 @@ class ilPeperbusConfigGUI extends ilPluginConfigGUI
 		$form = $this->initConfigurationForm();
 		if ($form->checkInput())
 		{
-			$set1 = $form->getInput("setting_1");
-			$set2 = $form->getInput("setting_2");
+			$peperbus_message = $form->getInput("peperbus_message");
+			$cb = $form->getInput("show_block");
 	
-			// @todo: implement saving to db
 			
 			ilUtil::sendSuccess($pl->txt("saving_invoked"), true);
 			$ilCtrl->redirect($this, "configure");
@@ -100,5 +106,38 @@ class ilPeperbusConfigGUI extends ilPluginConfigGUI
 		}
 	}
 
+
+		protected function storeConfiguration($name, $value)
+		{
+			global $ilDB;
+			
+			if($this->getConfigValue($name, false) === false)
+				$sql = "INSERT INTO `ui_uihk_peperbus_config` (`name`,`value`)
+						VALUES (
+							{$ilDB->quote($name, "text")},
+							{$ilDB->quote($value, "text")})";
+			else
+				$sql = "UPDATE `ui_uihk_peperbus_config`
+				SET `value` = {$ilDB->quote($value, "text")}
+				WHERE `name` = {$ilDB->quote($name, "text")}";
+			return $ilDB->manipulate($sql);
+		}
+		
+		protected function getConfiguration($name, $default = '')
+		{ 
+			global $ilDB;
+			$sql = "SELECT `value` 
+					FROM `ui_uihk_peperbus_config`
+					WHERE `name` = {$ilDB->quote($name, "text")}";
+
+			$result = $ilDB->query($sql);
+			$row = $ilDB->fetchObject($result);
+		
+			if(!$row)
+				return $default;
+			else
+				return $row->value;
+			}
+}
 }
 ?>
